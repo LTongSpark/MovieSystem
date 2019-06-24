@@ -2,8 +2,8 @@ package com.ml.recommend.util
 
 import com.ml.recommend.common.GlobalConstant
 import com.ml.recommend.domain.{MongoConfig, Movie, MovieRecs, Rating}
-import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.{MongoClient, MongoClientURI}
+import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 /**

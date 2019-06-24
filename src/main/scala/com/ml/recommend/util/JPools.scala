@@ -10,8 +10,7 @@ import redis.clients.jedis.JedisPool
   *      redis链接池
   */
 object JPools {
-
-  private val poolConf = new GenericObjectPoolConfig()
+  private  val  poolConf = new GenericObjectPoolConfig()
 
   poolConf.setMaxIdle(5) //最大空闲链接
   poolConf.setMaxTotal(2000)

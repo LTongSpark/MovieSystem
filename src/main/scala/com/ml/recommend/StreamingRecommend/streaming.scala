@@ -9,6 +9,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.{MongoClient, MongoClientURI}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.kafka010._
 import redis.clients.jedis.Jedis
@@ -19,10 +20,11 @@ import redis.clients.jedis.Jedis
   */
 object streaming extends SparkSess{
   def main(args: Array[String]): Unit = {
-    // 加载电影相似度矩阵数据，把它广播出去
-    val movieRec: collection.Map[Int,Map[Int ,Double]] = MongoUtil.loadMovieRecDFInMongoDB(spark, GlobalConstant.MOVIE_RECS)
     //问了方便查询  转换成map
-    val simMovieMatrixBroadCast = sc.broadcast(movieRec)
+    // 加载电影相似度矩阵数据，把它广播出去
+    val movieRec: collection.Map[Int,scala.collection.immutable.Map[Int ,Double]] =
+    MongoUtil.loadMovieRecDFInMongoDB(spark, GlobalConstant.CONTENT_MOVIE_RECS)
+    val simMovieMatrixBroadCast: Broadcast[collection.Map[Int, Map[Int, Double]]] = sc.broadcast(movieRec)
 
     //从redis中获取偏移量
     val offsetMap = Map[TopicPartition, Long]()
@@ -71,7 +73,9 @@ object streaming extends SparkSess{
             jedis.hset(ViolationsRepository.kafkaConfig("group.id"), offset.topic + "-" + offset.partition, offset.untilOffset.toString)
           }
         }
-
+        //启动程序
+        ssc.start()
+        ssc.awaitTermination()
       })
     // redis操作返回的是java类，为了用map操作需要引入转换类
     import scala.collection.JavaConversions._
@@ -91,7 +95,8 @@ object streaming extends SparkSess{
       * @param simMovies 相似度矩阵
       * @return          过滤之后的备选电影列表
       */
-    def getTopSimMovies(num:Int,mid:Int ,uid:Int,simMovies:collection.Map[Int,Map[Int,Double]])(implicit mongoConfig: MongoConfig): Array[Int] ={
+    def getTopSimMovies(num:Int,mid:Int ,uid:Int,simMovies:collection.Map[Int,Map[Int,Double]])
+                       (implicit mongoConfig: MongoConfig): Array[Int] ={
       //1、从相似度矩阵中拿出所有相似的电影
       val allSimMovie = simMovies(mid).toArray
 
@@ -126,7 +131,7 @@ object streaming extends SparkSess{
 
       for(candidateMovie <- candidateMovies; userRecentlyRating <- userRecentlyRatings){
         //拿到备选电影和最近平份额电影的相似度
-        val simScore:Double = simMovieMatrixBroadCast.value.getOrElse(candidateMovie,0.0).asInstanceOf[Map[Int,Double]].getOrElse(userRecentlyRating._1,0.0)
+        val simScore:Double = value.getOrElse(candidateMovie,0.0).asInstanceOf[Map[Int,Double]].getOrElse(userRecentlyRating._1,0.0)
 
         if(simScore > 0.7){
           //计算备选电影的基础推荐得分
@@ -146,11 +151,6 @@ object streaming extends SparkSess{
           math.log10(increMap.getOrDefault(mid, 1) - math.log10(decreMap.getOrDefault(mid, 1))))
       }.toArray.sortBy(-_._2)
     }
-
-
-
-
-
   }
 
 }

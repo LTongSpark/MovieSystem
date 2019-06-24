@@ -25,8 +25,8 @@ object GlobalConstant {
   val RATE_MORE_RECENTLY_MOVIES = "RateMoreRecentlyMovies"
   val AVERAGE_MOVIES = "AverageMovies"
   val GENRES_TOP_MOVIES = "GenresTopMovies"
-  val USER_RECS = "UserRecs"
-  val MOVIE_RECS = "MovieRecs"
+  val USER_TO_MOVIE = "UserToMovie"
+  val MOVIE_TO_USER = "MovieToUser"
   val USER_MAX_RECOMMENDATION = 20
   val MAX_USER_RATINGS_NUM = 20
   val MAX_SIM_MOVIES_NUM = 20

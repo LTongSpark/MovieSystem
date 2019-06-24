@@ -17,8 +17,11 @@ object Contenttfidf extends SparkSess{
     import spark.implicits._
 
     val movieTagsDF = movie.rdd.map(x =>(x.getAs[Int]("mid") ,x.getAs[String]("name") ,
-      x.getAs[String]("genres").map(c=> if(c=='|') ' ' else c)))
-      .toDF("mid", "name", "genres").cache()
+      x.getAs[String]("genres"))).map{
+      case(mid ,name ,geners) =>{
+        (mid,name ,geners.split("\\|").mkString(" "))
+      }
+    }.toDF("mid", "name", "genres").cache()
 
     // 核心部分： 用TF-IDF从内容信息中提取电影特征向量
 
@@ -61,7 +64,7 @@ object Contenttfidf extends SparkSess{
       .filter(_._2._2 > 0.6)    // 过滤出相似度大于0.6的
       .groupByKey()
       .map{
-        case (mid, items) => MovieRecs( mid, items.toList.sortBy(-_._2).map(x => Recommendation(x._1, x._2)) )
+        case (mid, items) => MovieRecs(mid, items.toList.sortBy(-_._2).map(x => Recommendation(x._1, x._2)) )
       }
       .toDF()
     //将数据保存在mongodb中

@@ -2,11 +2,10 @@ package com.ml.recommend.offlinerecommend
 
 import com.ml.recommend.common.GlobalConstant
 import com.ml.recommend.conf.SparkSess
-import com.ml.recommend.domain.{MongoConfig, MovieRecs, Recommendation, UserRecs}
-import com.ml.recommend.repository.ViolationsRepository
+import com.ml.recommend.domain.{MovieToUser, Recommendation, RecommendationUser, UserToMovie}
 import com.ml.recommend.util.MongoUtil
 import org.apache.spark.ml.recommendation.ALS
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable
 
@@ -20,9 +19,6 @@ object offline extends SparkSess {
 
     import spark.implicits._
     val ratingRDD = rating.rdd.map(line =>(line.getAs[Int]("uid") ,line.getAs[Int]("mid") ,line.getAs[Double]("score")))
-    //提取uid和mid并去重
-    val userRDD = ratingRDD.map(_._1).distinct()
-    val movieRDD = ratingRDD.map(_._2).distinct()
     //训练隐语义模型
     val trainData = ratingRDD.map(line =>(line._1 ,line._2,line._3)).toDF("uid" ,"mid" ,"score")
     //als建立推荐模型，显性反馈  代表偏好程度
@@ -44,9 +40,9 @@ object offline extends SparkSess {
       val recommList: Seq[(Int ,Float)] = line.getAs[Seq[Row]](1).map(x =>{
         (x.getInt(0),x.getFloat(1))
       })
-      UserRecs(line.getInt(0) ,recommList.toList.map(x =>Recommendation(x._1 ,x._2)))
+      UserToMovie(line.getInt(0) ,recommList.toList.map(x =>Recommendation(x._1 ,x._2)))
     }).toDF()
-    MongoUtil.insertDFInMongoDB(userRecs,GlobalConstant.USER_RECS)
+    MongoUtil.insertDFInMongoDB(userRecs,GlobalConstant.USER_TO_MOVIE)
 
     //为每个电影推荐10个候选人
     val movieUser = model.recommendForAllItems(50)
@@ -56,10 +52,10 @@ object offline extends SparkSess {
         (x.getInt(0),x.getFloat(1))
       })
 
-      MovieRecs(line.getInt(0) ,recommList.toList.map(x =>Recommendation(x._1 ,x._2)))
+      MovieToUser(line.getInt(0) ,recommList.toList.map(x =>RecommendationUser(x._1 ,x._2)))
     }).toDF()
 
-    MongoUtil.insertDFInMongoDB(movieRecs,GlobalConstant.MOVIE_RECS)
+    MongoUtil.insertDFInMongoDB(movieRecs,GlobalConstant.MOVIE_TO_USER)
 
 
 

@@ -2,8 +2,6 @@ package com.ml.recommend.dataloader
 
 import com.ml.recommend.domain._
 import com.ml.recommend.util.{ESUtil, MongoUtil}
-import com.mongodb.casbah.commons.MongoDBObject
-import com.mongodb.casbah.{MongoClient, MongoClientURI}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import com.ml.recommend.common.GlobalConstant
